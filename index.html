@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>基洛世界地图台 · KiroWorld Atlas</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <div>
+      <div class="brand-title">基洛世界地图台</div>
+      <div class="brand-sub">KiroWorld Atlas · 架空地理编辑</div>
+    </div>
+  </div>
+
+  <input id="projectName" class="project-name" value="未命名世界" spellcheck="false"
+         title="项目名称">
+
+  <div class="top-actions">
+    <button type="button" data-action="new" title="清空用户改动，回到原始地球">新建</button>
+    <button type="button" data-action="save" title="下载项目存档 (.kiroworld.json)">保存</button>
+    <button type="button" data-action="load" title="打开项目存档">打开</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button type="button" data-action="export-geojson" title="导出全部可见陆地">GeoJSON</button>
+    <button type="button" data-action="export-svg" title="导出当前视野为 SVG">SVG</button>
+    <button type="button" data-action="export-png" title="导出当前视野为 PNG">PNG</button>
+    <button type="button" data-action="export-project" class="primary" title="导出可再次打开的项目文件">导出项目</button>
+  </div>
+</header>
+
+<main class="workspace">
+  <aside class="toolrail" id="toolRail" aria-label="工具">
+    <button class="tool is-active" data-tool="select" title="选择 / 编辑顶点 (V)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 8-6 1.6L10 20 5 3z"/></svg>
+      <span>选择</span>
+    </button>
+    <button class="tool" data-tool="hand" title="平移视图 (H，或按住空格拖动)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12V6.5a1.5 1.5 0 013 0V12m0-1.5a1.5 1.5 0 013 0V12m0-1a1.5 1.5 0 013 0v4.5A5.5 5.5 0 0111.5 21h-1A5.5 5.5 0 015 15.5V12a1.5 1.5 0 013 0"/></svg>
+      <span>平移</span>
+    </button>
+    <button class="tool" data-tool="island" title="圆规造岛：点选圆心，拖出半径 (I)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      <span>造岛</span>
+    </button>
+    <button class="tool" data-tool="draw" title="手绘陆地：逐点点击，回车或点起点闭合 (D)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l3.2-1 10-10-2.2-2.2-10 10L4 20z"/><path d="M14.8 7.2l2.2-2.2a1.6 1.6 0 012.2 2.2l-2.2 2.2"/></svg>
+      <span>手绘</span>
+    </button>
+    <button class="tool" data-tool="erase" title="点击删除陆块 (E)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.5l6-6 5.5 5.5-3 3H6.5L4 17.5z"/><path d="M9.5 12l4-4 5 5-4 4"/></svg>
+      <span>擦除</span>
+    </button>
+
+    <div class="tool-spacer"></div>
+
+    <button class="tool" data-action="zoom-fit" title="缩放到完整世界">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      <span>全图</span>
+    </button>
+    <button class="tool" data-action="toggle-base" id="toggleBase" title="显示 / 隐藏原始地球底图">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.6"/></svg>
+      <span>底图</span>
+    </button>
+    <button class="tool" data-action="toggle-grid" id="toggleGrid" title="显示 / 隐藏经纬网">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M12 3v18"/><path d="M3 7h18M3 17h18M7 3v18M17 3v18" opacity=".5"/></svg>
+      <span>网格</span>
+    </button>
+    <button class="tool" data-action="toggle-labels" id="toggleLabels" title="显示 / 隐藏地名注记">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7v10M7 17h4"/><path d="M14 12h5M14 12v5M14 17h3" opacity=".6"/></svg>
+      <span>注记</span>
+    </button>
+  </aside>
+
+  <section class="mapwrap" id="mapWrap">
+    <canvas id="map"></canvas>
+    <div class="coord-chip" id="coordChip" hidden></div>
+    <div class="draw-hint" id="drawHint" hidden></div>
+  </section>
+
+  <aside class="panel" id="panel">
+    <section class="card">
+      <h2>经纬度定位</h2>
+      <div class="field-row">
+        <label>经度 <input id="goLon" type="number" step="0.001" placeholder="-150.0 或 150°W"></label>
+        <label>纬度 <input id="goLat" type="number" step="0.001" placeholder="-20.0 或 20°S"></label>
+      </div>
+      <div class="btn-row">
+        <button type="button" data-action="go-to">定位</button>
+        <button type="button" data-action="go-place" class="primary">在此造岛…</button>
+      </div>
+      <p class="hint">支持十进制度，也可写 <code>150°W</code> / <code>20°S</code>。定位后视野居中到该点。</p>
+    </section>
+
+    <section class="card" id="quickIslandCard">
+      <h2>快速造岛</h2>
+      <div class="field-row">
+        <label>半径 (km) <input id="islandRadius" type="number" min="1" max="3000" step="1" value="120"></label>
+        <label>名称 <input id="islandName" type="text" placeholder="例如：风见岛"></label>
+      </div>
+      <div class="field-row">
+        <label>岸线粗糙度 <input id="islandRough" type="range" min="0" max="1" step="0.05" value="0.35"></label>
+      </div>
+      <div class="btn-row">
+        <button type="button" data-action="island-preview" class="primary">在视图中心造岛</button>
+      </div>
+      <p class="hint">也可以直接用左侧「造岛」工具在图上点选拖出半径。</p>
+    </section>
+
+    <section class="card">
+      <h2>当前选中</h2>
+      <div id="selEmpty" class="hint">尚未选中任何陆块。用「选择」工具点击图上陆地。</div>
+      <div id="selBody" hidden>
+        <div class="field-row">
+          <label>名称 <input id="selName" type="text" spellcheck="false"></label>
+        </div>
+        <div class="meta" id="selMeta"></div>
+        <div class="btn-row">
+          <button type="button" data-action="sel-zoom">缩放到此</button>
+          <button type="button" data-action="sel-toggle">隐藏/显示</button>
+          <button type="button" data-action="sel-del" class="danger">删除陆块</button>
+        </div>
+        <p class="hint">顶点编辑：拖动顶点移动；双击边插入顶点；Alt+单击顶点删除顶点；Delete 删除整个陆块。</p>
+      </div>
+    </section>
+
+    <section class="card grow">
+      <h2>陆块列表</h2>
+      <input id="featureFilter" type="search" placeholder="按名称筛选，例如 澳大 / base-9">
+      <ul class="feature-list" id="featureList"></ul>
+    </section>
+  </aside>
+</main>
+
+<footer class="statusbar">
+  <div class="status-left">
+    <span id="statusTool">选择</span>
+    <span class="sep"></span>
+    <span id="statusCoords">—</span>
+    <span class="sep"></span>
+    <span id="statusZoom">—</span>
+  </div>
+  <div class="status-right">
+    <span id="statusCounts">—</span>
+    <span class="sep"></span>
+    <span class="keys">滚轮缩放 · 拖动平移 · Esc 取消 · Del 删除</span>
+    <span class="sep"></span>
+    <span id="statusSave">未保存</span>
+  </div>
+</footer>
+
+<input type="file" id="fileInput" accept=".json,application/json" hidden>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
